@@ -19,6 +19,11 @@ spec:
         app.kubernetes.io/component: memcached
         app.kubernetes.io/name: {{ include "pydici.fullname" . }}-memcached
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11211
+        runAsGroup: 11211
+      automountServiceAccountToken: false
       containers:
       - name: memcached
         image: "{{ .Values.memcached.image.registry }}/{{ .Values.memcached.image.repository }}:{{ .Values.memcached.image.tag }}"
@@ -27,6 +32,16 @@ spec:
         - name: memcached
           containerPort: 11211
           protocol: TCP
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
         livenessProbe:
           tcpSocket:
             port: memcached

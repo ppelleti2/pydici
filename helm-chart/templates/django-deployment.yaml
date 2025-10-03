@@ -18,10 +18,15 @@ spec:
         app.kubernetes.io/component: django
         app.kubernetes.io/name: {{ include "pydici.fullname" . }}-django
     spec:
-      {{- with .Values.podSecurityContext }}
       securityContext:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
       initContainers:
       - name: wait-for-db
         image: busybox:1.35
@@ -35,6 +40,12 @@ spec:
             sleep 2
           done
           echo "MariaDB is ready!"
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       - name: migrate
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
         imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
@@ -58,6 +69,12 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ include "pydici.fullname" . }}-django
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       {{- if .Values.pydici.demoInit.enabled }}
       - name: collectstatic
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
@@ -82,6 +99,15 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ include "pydici.fullname" . }}-django
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: static-dir
+          mountPath: /code/static
       - name: create-test-data
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
         imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
@@ -109,13 +135,24 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ include "pydici.fullname" . }}-django
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       {{- end }}
       containers:
       - name: pydici
-        {{- with .Values.securityContext }}
         securityContext:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
         imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
         command:
@@ -163,6 +200,9 @@ spec:
           timeoutSeconds: 5
         resources:
           {{- toYaml .Values.pydici.resources | nindent 10 }}
+        volumeMounts:
+        - name: static-dir
+          mountPath: /code/static
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -175,3 +215,6 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+      - name: static-dir
+        emptyDir: {}
