@@ -61,7 +61,6 @@ mariadb:
     repository: mariadb
     tag: "12"
     pullPolicy: IfNotPresent
-  
   auth:
     rootPassword: "root"
     database: "pydici"
@@ -79,11 +78,11 @@ mariadb:
   
   resources:
     limits:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 1000m
+      memory: 2Gi
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
 
 redis:
   enabled: true

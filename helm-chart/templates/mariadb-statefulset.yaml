@@ -20,8 +20,27 @@ spec:
         app.kubernetes.io/component: mariadb
         app.kubernetes.io/name: {{ include "pydici.fullname" . }}-mariadb
     spec:
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
       containers:
       - name: mariadb
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          privileged: false
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
         image: "{{ .Values.mariadb.image.registry }}/{{ .Values.mariadb.image.repository }}:{{ .Values.mariadb.image.tag }}"
         imagePullPolicy: {{ .Values.mariadb.image.pullPolicy }}
         env:
