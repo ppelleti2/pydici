@@ -75,6 +75,9 @@ spec:
           capabilities:
             drop:
             - ALL
+        volumeMounts:
+        - name: tmp-dir
+          mountPath: /tmp
       {{- if .Values.pydici.demoInit.enabled }}
       - name: collectstatic
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
@@ -108,6 +111,8 @@ spec:
         volumeMounts:
         - name: static-dir
           mountPath: /code/static
+        - name: tmp-dir
+          mountPath: /tmp
       - name: create-test-data
         image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
         imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
@@ -141,6 +146,9 @@ spec:
           capabilities:
             drop:
             - ALL
+        volumeMounts:
+        - name: tmp-dir
+          mountPath: /tmp
       {{- end }}
       containers:
       - name: pydici
@@ -203,6 +211,8 @@ spec:
         volumeMounts:
         - name: static-dir
           mountPath: /code/static
+        - name: tmp-dir
+          mountPath: /tmp
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -217,4 +227,6 @@ spec:
       {{- end }}
       volumes:
       - name: static-dir
+        emptyDir: {}
+      - name: tmp-dir
         emptyDir: {}
