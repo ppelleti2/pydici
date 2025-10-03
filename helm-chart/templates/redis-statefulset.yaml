@@ -1,0 +1,86 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "pydici.fullname" . }}-redis
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  serviceName: {{ include "pydici.fullname" . }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        {{- include "pydici.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+        app.kubernetes.io/name: {{ include "pydici.fullname" . }}-redis
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: redis
+        image: "{{ .Values.redis.image.registry }}/{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        {{- if .Values.redis.auth.enabled }}
+        env:
+        - name: REDIS_PASSWORD
+          value: {{ .Values.redis.auth.password | quote }}
+        command:
+        - redis-server
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        {{- end }}
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: redis
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          tcpSocket:
+            port: redis
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          {{- toYaml .Values.redis.resources | nindent 10 }}
+        {{- if .Values.redis.persistence.enabled }}
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        {{- end }}
+  {{- if .Values.redis.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "pydici.labels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      {{- if .Values.redis.persistence.storageClass }}
+      storageClassName: {{ .Values.redis.persistence.storageClass }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.redis.persistence.size }}
+  {{- end }}
+{{- end }}

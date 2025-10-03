@@ -1,0 +1,51 @@
+{{- if and .Values.networkPolicies.enabled .Values.memcached.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pydici.fullname" . }}-memcached
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: networkpolicy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: memcached
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: django
+    ports:
+    - protocol: TCP
+      port: 11211
+  {{- if .Values.celery.worker.enabled }}
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: celery-worker
+    ports:
+    - protocol: TCP
+      port: 11211
+  {{- end }}
+  {{- if .Values.celery.beat.enabled }}
+  - from:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: celery-beat
+    ports:
+    - protocol: TCP
+      port: 11211
+  {{- end }}
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+{{- end }}

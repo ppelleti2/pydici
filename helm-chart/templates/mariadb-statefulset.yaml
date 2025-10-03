@@ -1,0 +1,80 @@
+{{- if .Values.mariadb.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "pydici.fullname" . }}-mariadb
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mariadb
+spec:
+  serviceName: {{ include "pydici.fullname" . }}-mariadb
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mariadb
+  template:
+    metadata:
+      labels:
+        {{- include "pydici.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mariadb
+        app.kubernetes.io/name: {{ include "pydici.fullname" . }}-mariadb
+    spec:
+      containers:
+      - name: mariadb
+        image: "{{ .Values.mariadb.image.registry }}/{{ .Values.mariadb.image.repository }}:{{ .Values.mariadb.image.tag }}"
+        imagePullPolicy: {{ .Values.mariadb.image.pullPolicy }}
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-root-password
+        - name: MARIADB_DATABASE
+          value: {{ .Values.mariadb.auth.database | quote }}
+        - name: MARIADB_USER
+          value: {{ .Values.mariadb.auth.username | quote }}
+        - name: MARIADB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        ports:
+        - name: mysql
+          containerPort: 3306
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: mysql
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          tcpSocket:
+            port: mysql
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+        resources:
+          {{- toYaml .Values.mariadb.resources | nindent 10 }}
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "pydici.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mariadb
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.mariadb.primary.persistence.size }}
+      {{- if .Values.mariadb.primary.persistence.storageClass }}
+      storageClassName: {{ .Values.mariadb.primary.persistence.storageClass }}
+      {{- else if .Values.global.storageClass }}
+      storageClassName: {{ .Values.global.storageClass }}
+      {{- end }}
+{{- end }}

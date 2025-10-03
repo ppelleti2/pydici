@@ -59,12 +59,51 @@
                 {% include "core/_messages.html" %}
             {% endblock %}
             {% block content %}{% endblock %}
-        </div> <!-- /container -->
+        </div>
+        <div class="modal fade" id="dailyMessageModal" tabindex="-1" aria-labelledby="dailyMessageModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header text-white">
+                        <h5 class="modal-title" id="dailyMessageModalLabel">
+                            <i class="bi bi-megaphone"></i> Des nouvelles de l'ERP gaulois à taille humaine
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <h3 class="text-left mb-3">Pydici sur Kubernetes</h3>
+                        <div id="dailyMessageContent">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <strong>J'ai finalement vu la lumière</strong></br>
+                                    Elle est bleue, éclatante, j'ai finalement décidé de ne plus lui résister. Je ne pouvais pas lui résister, l'appel de Kubernetes était trop fort.</br>
+                                    Je tenais à saisir l'opportunité offerte par ce changelog pour clamer haut et fort <strong>ma conversion totale et sans aucun doute à Kubernetes.</strong></br>
+                                    Car j'ai douté, j'ai résisté, mais je me rends maintenant compte que ma vie était un mensonge.</br>
+                                    Je ressentais un vide profond, une insatisfaction sur laquelle je n'arrivais pas à mettre le doigt. </br>
+                                    Maintenant je sais, ce vide était l'absence de Kubernetes dans ma vie.</br></br>
+                                    <strong>J'ai également décidé de déployer Pycici sur Azure</strong>, car je fais une confiance <strong>totale</strong> à Microsoft pour héberger les données les plus critiques qu'enioka puisse avoir.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="dontShowAgain">
+                            Amen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% endblock %}
 
     <script type="text/javascript">
         const getCookieByName = (cookieName) => document.cookie.split('; ')
             .find((cookie) => cookie.split('=')[0] === cookieName)?.split('=')[1] || null;
+        
+        const setCookie = (name, value, days = 30) => {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`;
+        };
+        
         $(document).ready(function() {
             // detect mobile devices using screen size
             const deviceType = Math.min(window.screen.width, window.screen.height) < 768 ? 'mobile' : 'desktop';
@@ -73,6 +112,43 @@
             if (deviceTypeCookie === null || deviceTypeCookie !== deviceType) {
                 document.cookie = 'deviceType=' + deviceType + '; SameSite=Strict';
             }
+            
+            // Gestion de la modal du message du jour
+            const dailyMessageSeen = getCookieByName('dailyMessageSeen');
+            const currentDate = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+            const modalVersion = '2025-09-24'; // Version du message à changer quand on met à jour le contenu
+            
+            // Vérifier si on est sur la page d'accueil (URL racine ou index)
+            const isHomePage = window.location.pathname === '/' || 
+                              window.location.pathname === '' || 
+                              window.location.pathname.endsWith('/core/') ||
+                              window.location.pathname.includes('/core/index') ||
+                              window.location.pathname.match(/^\/(index\.html?)?$/);
+            
+            if (isHomePage && (!dailyMessageSeen || dailyMessageSeen !== modalVersion)) {
+                // Afficher la modal après 5 secondes
+                setTimeout(function() {
+                    const modalElement = document.getElementById('dailyMessageModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }, 5000);
+            }
+            
+            // Gérer le bouton "Ne plus afficher"
+            $('#dontShowAgain').click(function() {
+                setCookie('dailyMessageSeen', modalVersion, 30); // Cookie valide 30 jours
+                $('#dailyMessageModal').modal('hide');
+            });
+            
+            // Marquer comme vu quand la modal est fermée (même sans cliquer "Ne plus afficher")
+            $('#dailyMessageModal').on('hidden.bs.modal', function () {
+                if (!getCookieByName('dailyMessageSeen') || getCookieByName('dailyMessageSeen') !== modalVersion) {
+                    // Si pas encore marqué comme "ne plus afficher", marquer comme vu pour cette session seulement
+                    setCookie('dailyMessageSeen', modalVersion + '-session', 0.5); // Cookie valide 12h
+                }
+            });
         });
     </script>
 

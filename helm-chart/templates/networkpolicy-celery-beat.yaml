@@ -1,0 +1,54 @@
+{{- if and .Values.networkPolicies.enabled .Values.celery.beat.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pydici.fullname" . }}-celery-beat
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: networkpolicy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-beat
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: []  # Pas de connexions entrantes directes
+  egress:
+  # Autorise les connexions DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  {{- if .Values.redis.enabled }}
+  # Autorise les connexions vers Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  {{- end }}
+  {{- if .Values.memcached.enabled }}
+  # Autorise les connexions vers Memcached
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: memcached
+    ports:
+    - protocol: TCP
+      port: 11211
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- include "pydici.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: mariadb
+    ports:
+    - protocol: TCP
+      port: 3306
+  {{- end }}
+{{- end }}

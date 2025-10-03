@@ -1,0 +1,162 @@
+global:
+  imageRegistry: ""
+  storageClass: ""
+fullnameOverride: pydici
+
+pydici:
+  image:
+    registry: rg.fr-par.scw.cloud/demo-enioka
+    repository: pydici
+    tag: "latest"
+    pullPolicy: Always
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8000
+  
+  django:
+    debug: false
+    allowedHosts: "*"
+    timezone: "Europe/Paris"
+    locale: "fr-fr"
+    csrfTrustedOrigins: "https://pydici.k8s.6c3133c2d71.fr"
+  demoInit:
+    enabled: true
+    ignoreErrors: true
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+celery:
+  worker:
+    enabled: true
+    replicaCount: 3
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1024Mi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  
+  beat:
+    enabled: true
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+mariadb:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: mariadb
+    tag: "12"
+    pullPolicy: IfNotPresent
+  
+  auth:
+    rootPassword: "root"
+    database: "pydici"
+    username: "pydici"
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+  
+  service:
+    type: ClusterIP
+    port: 3306
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+redis:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: redis
+    tag: "8-alpine"
+    pullPolicy: IfNotPresent
+  
+  auth:
+    enabled: false
+    password: ""
+  
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+  
+  service:
+    type: ClusterIP
+    port: 6379
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+memcached:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: memcached
+    tag: "1.6-alpine"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 11211
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: pydici.k8s.6c3133c2d71.fr
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  certManager:
+    enabled: true
+    issuer: "letsencrypt-staging" 
+    issuerKind: "ClusterIssuer"
+  
+  basicAuth:
+    enabled: true
+
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+networkPolicies:
+  enabled: true

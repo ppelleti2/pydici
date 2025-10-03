@@ -4,6 +4,9 @@
 import os
 import sys
 
+# Root dir - imported from pydici.py
+PYDICI_ROOTDIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), os.path.pardir, os.path.pardir)
+
 ADMINS = (
      ('Sébastien Renard', 'sebastien@digitalfox.org'),
 )
@@ -12,34 +15,37 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': "pydici",
-        'USER': "pydici" if "test" not in sys.argv else "root",
-        'PASSWORD': "pydici" if "test" not in sys.argv else "root",
-        'HOST': "mariadb",
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.environ.get('DB_NAME', "pydici"),
+        'USER': os.environ.get('DB_USER', "pydici" if "test" not in sys.argv else "root"),
+        'PASSWORD': os.environ.get('DB_PASSWORD', "pydici" if "test" not in sys.argv else "root"),
+        'HOST': os.environ.get('DB_HOST', "mariadb"),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': 'memcached:11211',
+        'BACKEND': os.environ.get('CACHE_BACKEND', 'django.core.cache.backends.memcached.PyMemcacheCache'),
+        'LOCATION': os.environ.get('CACHE_LOCATION', 'memcached:11211'),
 
     },
     'select2': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': 'memcached:11211',
+        'BACKEND': os.environ.get('CACHE_BACKEND', 'django.core.cache.backends.memcached.PyMemcacheCache'),
+        'LOCATION': os.environ.get('CACHE_LOCATION', 'memcached:11211'),
         'TIMEOUT': 60*15,
     },
 
 }
 
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
-TIME_ZONE = 'Europe/Paris'
+TIME_ZONE = os.environ.get('TIME_ZONE', 'Europe/Paris')
 
-LANGUAGE_CODE = 'fr-fr'
+LANGUAGE_CODE = os.environ.get('LANGUAGE_CODE', 'fr-fr')
 LOCALE_PATHS = (os.path.join(PYDICI_ROOTDIR, "locale"),)
 
 SITE_ID = 1
@@ -57,10 +63,10 @@ MEDIA_ROOT = ""
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = "/media/"
+MEDIA_URL = os.environ.get('MEDIA_URL', "/media/")
 
 # STATICFILES_DIRS = (os.path.join(PYDICI_ROOTDIR, 'media'),)
-STATIC_URL = '/static/'
+STATIC_URL = os.environ.get('STATIC_URL', '/static/')
 STATIC_ROOT = os.path.join(PYDICI_ROOTDIR, "static")
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
@@ -173,16 +179,16 @@ LOGGING = {
 }
 
 # Celery configuration
-CELERY_BROKER_URL = "redis://redis"
-CELERY_RESULT_BACKEND = "django-db"
-CELERY_CACHE_BACKEND = "default"
-CELERY_TASK_DEFAULT_QUEUE = "pydici"
-CELERY_TASK_TRACK_STARTED = True
-CELERY_RESULT_EXTENDED = True
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-CELERY_ENABLE_UTC = False
-DJANGO_CELERY_BEAT_TZ_AWARE = False
-CELERY_TIMEZONE = 'Europe/Paris'
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', "redis://redis")
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', "django-db")
+CELERY_CACHE_BACKEND = os.environ.get('CELERY_CACHE_BACKEND', "default")
+CELERY_TASK_DEFAULT_QUEUE = os.environ.get('CELERY_TASK_DEFAULT_QUEUE', "pydici")
+CELERY_TASK_TRACK_STARTED = os.environ.get('CELERY_TASK_TRACK_STARTED', 'True').lower() == 'true'
+CELERY_RESULT_EXTENDED = os.environ.get('CELERY_RESULT_EXTENDED', 'True').lower() == 'true'
+CELERY_BEAT_SCHEDULER = os.environ.get('CELERY_BEAT_SCHEDULER', "django_celery_beat.schedulers:DatabaseScheduler")
+CELERY_ENABLE_UTC = os.environ.get('CELERY_ENABLE_UTC', 'False').lower() == 'true'
+DJANGO_CELERY_BEAT_TZ_AWARE = os.environ.get('DJANGO_CELERY_BEAT_TZ_AWARE', 'False').lower() == 'true'
+CELERY_TIMEZONE = os.environ.get('CELERY_TIMEZONE', 'Europe/Paris')
 
 # Audit log configuration
 AUDITLOG_INCLUDE_TRACKING_MODELS = (

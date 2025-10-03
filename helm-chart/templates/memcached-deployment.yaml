@@ -1,0 +1,44 @@
+{{- if .Values.memcached.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pydici.fullname" . }}-memcached
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: memcached
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: memcached
+  template:
+    metadata:
+      labels:
+        {{- include "pydici.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: memcached
+        app.kubernetes.io/name: {{ include "pydici.fullname" . }}-memcached
+    spec:
+      containers:
+      - name: memcached
+        image: "{{ .Values.memcached.image.registry }}/{{ .Values.memcached.image.repository }}:{{ .Values.memcached.image.tag }}"
+        imagePullPolicy: {{ .Values.memcached.image.pullPolicy }}
+        ports:
+        - name: memcached
+          containerPort: 11211
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: memcached
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          tcpSocket:
+            port: memcached
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+        resources:
+          {{- toYaml .Values.memcached.resources | nindent 10 }}
+{{- end }}

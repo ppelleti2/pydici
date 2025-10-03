@@ -1,0 +1,55 @@
+{{- if .Values.pydici.demoInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "pydici.fullname" . }}-test-env
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test-env
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "1"
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-env
+        image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
+        imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Testing environment variables..."
+          echo "SECRET_KEY: ${SECRET_KEY:0:10}..." # Only show first 10 chars for security
+          echo "PYDICI_ENV: $PYDICI_ENV"
+          echo "DJANGO_SETTINGS_MODULE: $DJANGO_SETTINGS_MODULE"
+          echo "DB_HOST: $DB_HOST"
+          echo "DB_NAME: $DB_NAME"
+          echo "Testing Django configuration..."
+          python -c "
+          import os
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pydici.settings')
+          import django
+          django.setup()
+          from django.conf import settings
+          print('Django configuration loaded successfully!')
+          print('SECRET_KEY is set:', bool(settings.SECRET_KEY))
+          print('Database name:', settings.DATABASES['default']['NAME'])
+          "
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-django
+              key: secret-key
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        envFrom:
+        - configMapRef:
+            name: {{ include "pydici.fullname" . }}-django
+{{- end }}

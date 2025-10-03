@@ -35,6 +35,9 @@ from people.views import consultant_home
 from core.utils import nextMonth, previousMonth, get_fiscal_year, user_has_feature
 
 
+def health_check(request):
+    """Simple health check endpoint for Kubernetes probes"""
+    return HttpResponse("OK", status=200)
 
 @login_required
 def index(request):

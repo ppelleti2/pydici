@@ -16,9 +16,11 @@ if env not in ("dev", "prod"):
 
 include("pydici.py", "django.py", f"{env}.py", optional("local.py"))
 
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-try:
-    SECRET_KEY
-except NameError as e:
-    print(f"{e}. You need to declare it in settings in your settings/local.py file")
-    exit()
+if not SECRET_KEY:
+    try:
+        SECRET_KEY
+    except NameError as e:
+        print(f"{e}. You need to declare it in settings in your settings/local.py file or set SECRET_KEY environment variable")
+        exit()

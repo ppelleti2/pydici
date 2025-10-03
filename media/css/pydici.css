@@ -672,3 +672,42 @@ td a:hover {
   animation: l3 1s infinite linear;
 }
 @keyframes l3 {to{transform: rotate(1turn)}}
+
+#dailyMessageModal .modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+#dailyMessageModal strong {
+    color: rgb(255, 134, 52);
+}
+
+#dailyMessageModal .modal-header {
+    border-radius: 15px 15px 0 0;
+    background-color: rgb(255, 134, 52);
+    border-bottom: none;
+}
+
+#dailyMessageModal .modal-body {
+    padding: 2rem;
+}
+
+#dailyMessageModal .modal-footer {
+    border-top: none;
+    padding: 1rem 2rem 2rem;
+}
+
+#dailyMessageModal .list-unstyled li {
+    transition: transform 0.2s ease;
+}
+
+#dailyMessageModal .list-unstyled li:hover {
+    transform: translateX(5px);
+}
+
+#dailyMessageModal .alert-info {
+    border-left: 4px solid #8F6749;
+    background-color: #8F6749;
+    border-radius: 8px;
+}

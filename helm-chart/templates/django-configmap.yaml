@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pydici.fullname" . }}-django
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: django
+data:
+  # Database configuration
+  DB_ENGINE: "django.db.backends.mysql"
+  DB_NAME: {{ .Values.mariadb.auth.database | quote }}
+  DB_USER: {{ .Values.mariadb.auth.username | quote }}
+  DB_HOST: {{ include "pydici.mariadbHost" . | quote }}
+  DB_PORT: {{ .Values.mariadb.service.port | quote }}
+  
+  # Cache configuration
+  CACHE_BACKEND: "django.core.cache.backends.memcached.PyMemcacheCache"
+  CACHE_LOCATION: "{{ include "pydici.memcachedHost" . }}:{{ .Values.memcached.service.port }}"
+  
+  # Celery configuration
+  CELERY_BROKER_URL: "redis://{{ include "pydici.redisHost" . }}:{{ .Values.redis.service.port }}"
+  CELERY_RESULT_BACKEND: "django-db"
+  CELERY_CACHE_BACKEND: "default"
+  CELERY_TASK_DEFAULT_QUEUE: "pydici"
+  CELERY_TASK_TRACK_STARTED: "True"
+  CELERY_RESULT_EXTENDED: "True"
+  CELERY_BEAT_SCHEDULER: "django_celery_beat.schedulers:DatabaseScheduler"
+  CELERY_ENABLE_UTC: "False"
+  DJANGO_CELERY_BEAT_TZ_AWARE: "False"
+  CELERY_TIMEZONE: {{ .Values.pydici.django.timezone | quote }}
+  CSRF_TRUSTED_ORIGINS: {{ .Values.pydici.django.csrfTrustedOrigins | quote }}
+  # Django configuration
+  PYDICI_ENV: "prod"
+  DJANGO_SETTINGS_MODULE: "pydici.settings"
+  DEBUG: {{ .Values.pydici.django.debug | quote }}
+  ALLOWED_HOSTS: {{ .Values.pydici.django.allowedHosts | quote }}
+  TIME_ZONE: {{ .Values.pydici.django.timezone | quote }}
+  LANGUAGE_CODE: {{ .Values.pydici.django.locale | quote }}
+  
+  # Static files
+  STATIC_URL: "/static/"
+  MEDIA_URL: "/media/"

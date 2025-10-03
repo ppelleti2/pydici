@@ -8,6 +8,7 @@ from django.urls import re_path
 import core.views as v
 
 core_urls = [ re_path(r'^$', v.index, name='index'),
+              re_path(r'^health/$', v.health_check, name='health_check'),
               re_path(r'^search$', v.search, name='search'),
               re_path(r'^dashboard$', v.dashboard, name='dashboard'),
               re_path(r'^risks$', v.risk_reporting, name='risk_reporting'),

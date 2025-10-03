@@ -15,8 +15,11 @@ if pydici_path not in sys.path:
     sys.path.append(os.path.join(pydici_path,"pydici"))
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pydici.settings")
-
 # This application object is used by the development server
 # as well as any WSGI server configured to use this file.
 from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
+app = get_wsgi_application()
+
+def application(environ, start_response):
+    environ['REMOTE_USER'] = "CAA"
+    return app(environ, start_response)

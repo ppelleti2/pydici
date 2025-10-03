@@ -1,0 +1,177 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pydici.fullname" . }}
+  labels:
+    {{- include "pydici.labels" . | nindent 4 }}
+    app.kubernetes.io/component: django
+spec:
+  replicas: {{ .Values.pydici.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pydici.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: django
+  template:
+    metadata:
+      labels:
+        {{- include "pydici.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: django
+        app.kubernetes.io/name: {{ include "pydici.fullname" . }}-django
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for MariaDB to be ready..."
+          until nc -z {{ include "pydici.mariadbHost" . }} {{ .Values.mariadb.service.port }}; do
+            echo "MariaDB not ready, sleeping..."
+            sleep 2
+          done
+          echo "MariaDB is ready!"
+      - name: migrate
+        image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
+        imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Running database migrations..."
+          python manage.py migrate
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-django
+              key: secret-key
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        envFrom:
+        - configMapRef:
+            name: {{ include "pydici.fullname" . }}-django
+      {{- if .Values.pydici.demoInit.enabled }}
+      - name: collectstatic
+        image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
+        imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Collecting static files..."
+          python manage.py collectstatic
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-django
+              key: secret-key
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        envFrom:
+        - configMapRef:
+            name: {{ include "pydici.fullname" . }}-django
+      - name: create-test-data
+        image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
+        imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Creating test data..."
+          {{- if .Values.pydici.demoInit.ignoreErrors }}
+          python manage.py create_test_data || echo "Warning: create_test_data failed, continuing anyway"
+          {{- else }}
+          python manage.py create_test_data
+          {{- end }}
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-django
+              key: secret-key
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        envFrom:
+        - configMapRef:
+            name: {{ include "pydici.fullname" . }}-django
+      {{- end }}
+      containers:
+      - name: pydici
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        image: "{{ .Values.pydici.image.registry }}/{{ .Values.pydici.image.repository }}:{{ .Values.pydici.image.tag }}"
+        imagePullPolicy: {{ .Values.pydici.image.pullPolicy }}
+        command:
+        - gunicorn
+        - --bind
+        - "0.0.0.0:8000"
+        - --workers
+        - "3"
+        - --timeout
+        - "120"
+        - pydici.wsgi:application
+        - --forwarder-headers=SCRIPT_NAME,PATH_INFO,REMOTE_USER
+        - --forwarded-allow-ips=*
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-django
+              key: secret-key
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pydici.fullname" . }}-mariadb
+              key: mariadb-password
+        envFrom:
+        - configMapRef:
+            name: {{ include "pydici.fullname" . }}-django
+        livenessProbe:
+          httpGet:
+            path: /health/
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+        resources:
+          {{- toYaml .Values.pydici.resources | nindent 10 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
